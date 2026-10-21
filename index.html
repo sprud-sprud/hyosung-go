@@ -2170,17 +2170,27 @@ async function findNearByAddress(){
     new kakao.maps.services.Places().keywordSearch(q.trim(),(r2,st2)=>{ if(st2===kakao.maps.services.Status.OK&&r2.length) showNear([+r2[0].x,+r2[0].y],r2[0].place_name); else none() },{location:new kakao.maps.LatLng(BUSGEO._school[1],BUSGEO._school[0]),radius:20000});
   });
 }
-async function kakaoShare(){
-  const url=location.origin+location.pathname, img=url+'og.png', title='효성고등학교 오시는 길 · 스쿨버스 노선', desc='성남·위례 스쿨버스 등하교 노선, 정류장 시각, 시내·좌석버스 안내';
-  try{
-    if(!window.Kakao) await new Promise((res,rej)=>{const s=document.createElement('script'); s.src='https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s)});
-    if(!Kakao.isInitialized()) Kakao.init(window.KAKAO_JS_KEY);
-    Kakao.Share.sendDefault({objectType:'feed',content:{title,description:desc,imageUrl:img,imageWidth:1200,imageHeight:630,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'노선 보러 가기',link:{mobileWebUrl:url,webUrl:url}}]});
-  }catch(e){
-    try{ if(navigator.share) await navigator.share({title,url}); else { await navigator.clipboard.writeText(url); toast('링크를 복사했어요') } }catch(_){ toast('공유하지 못했어요') }
-  }
+function kakaoReady(){ return !!(window.Kakao && Kakao.isInitialized && Kakao.isInitialized()); }
+function preloadKakaoShare(){
+  if(!window.WEB_ONLY || !window.KAKAO_JS_KEY || window.Kakao) return;
+  const s=document.createElement('script'); s.src='https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js';
+  s.onload=()=>{ try{ if(!Kakao.isInitialized()) Kakao.init(window.KAKAO_JS_KEY) }catch(e){} }; document.head.appendChild(s);
 }
-document.addEventListener('click',e=>{ if(e.target.closest('[data-share]')) kakaoShare() });
+preloadKakaoShare();
+function kakaoShare(){
+  const url=location.origin+location.pathname, img=url+'og.png', title='효성고등학교 오시는 길 · 스쿨버스 노선', desc='성남·위례 스쿨버스 등하교 노선, 정류장 시각, 시내·좌석버스 안내';
+  /* 팝업 차단을 피하려고 SDK 는 미리 불러 두고, 눌렀을 때는 곧바로 호출합니다 */
+  if(kakaoReady()){
+    try{
+      Kakao.Share.sendDefault({objectType:'feed',content:{title,description:desc,imageUrl:img,imageWidth:1200,imageHeight:630,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'노선 보러 가기',link:{mobileWebUrl:url,webUrl:url}}]});
+      return;
+    }catch(e){}
+  } else preloadKakaoShare();
+  const done=()=>toast('링크를 복사했어요. 카카오톡에 붙여넣어 보내 주세요');
+  if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(done,()=>toast('공유하지 못했어요. 주소창의 링크를 복사해 주세요')); return }
+  toast('공유하지 못했어요. 주소창의 링크를 복사해 주세요');
+}document.addEventListener('click',e=>{ if(e.target.closest('[data-share]')) kakaoShare() });
 
 async function bindLife(){
   const body = $('#lifeBody');
