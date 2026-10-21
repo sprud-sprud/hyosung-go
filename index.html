@@ -1221,6 +1221,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 #splash,.splash{display:none!important}
 #menuBtn,#searchBtn,#lifeSeg{display:none!important}
 #topTitle{padding-left:20px}
+.bar{height:88px!important}
+:root{--top:calc(env(safe-area-inset-top) + 136px)!important}
+.qrbox{display:flex;flex-direction:column;align-items:center;gap:3px;margin-left:auto;padding-right:14px}
+.qrbox .qrimg{width:58px;height:58px;display:block;background:#fff;padding:4px;box-sizing:content-box}
+@media(min-width:760px){.bar{height:124px!important}:root{--top:calc(env(safe-area-inset-top) + 172px)!important}.qrbox .qrimg{width:90px;height:90px}.qrbox span{font-size:13px}.qrbox{gap:4px}}
+.qrbox span{font-size:10.5px;font-weight:700;color:var(--navy);line-height:1}
 @media(min-width:760px){.app,.topbar{max-width:720px}}
 </style>
 </head>
@@ -1238,7 +1244,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="bar">
       <button class="iconbtn" id="menuBtn" aria-label="메뉴 열기"></button>
       <button class="t" id="topTitle" data-go="access" aria-label="홈으로">효성고등학교</button>
-      <button class="iconbtn" id="searchBtn" aria-label="검색"></button>
+      <div class="qrbox" aria-label="QR 코드"><svg class="qrimg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h29v29H0z"/><path stroke="#000000" d="M0 0.5h7m1 0h2m1 0h2m3 0h1m2 0h2m1 0h7M0 1.5h1m5 0h1m1 0h1m1 0h2m1 0h1m3 0h2m3 0h1m5 0h1M0 2.5h1m1 0h3m1 0h1m4 0h5m3 0h1m2 0h1m1 0h3m1 0h1M0 3.5h1m1 0h3m1 0h1m1 0h3m2 0h1m3 0h1m1 0h1m2 0h1m1 0h3m1 0h1M0 4.5h1m1 0h3m1 0h1m2 0h1m3 0h4m2 0h1m2 0h1m1 0h3m1 0h1M0 5.5h1m5 0h1m2 0h2m1 0h3m4 0h2m1 0h1m5 0h1M0 6.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M8 7.5h1m2 0h1m4 0h2m1 0h1M0 8.5h1m1 0h2m1 0h3m2 0h3m1 0h1m2 0h3m2 0h1m2 0h1m1 0h2M0 9.5h3m4 0h5m4 0h1m2 0h6m3 0h1M3 10.5h4m1 0h2m1 0h3m2 0h3m1 0h2m4 0h2M0 11.5h6m1 0h2m3 0h5m1 0h1m1 0h1m1 0h2m4 0h1M4 12.5h1m1 0h3m2 0h1m1 0h5m1 0h1m1 0h1m1 0h1m1 0h2M0 13.5h2m1 0h1m1 0h1m4 0h8m1 0h2m1 0h1m3 0h3M0 14.5h2m1 0h1m1 0h4m2 0h2m1 0h1m2 0h1m1 0h1m1 0h1m2 0h1m1 0h3M0 15.5h5m2 0h3m4 0h1m1 0h1m1 0h1m1 0h1m3 0h1m2 0h1M0 16.5h1m3 0h1m1 0h2m1 0h2m1 0h4m4 0h2m2 0h2m1 0h1M2 17.5h4m1 0h1m4 0h1m2 0h1m1 0h1m2 0h2m1 0h1m1 0h3M0 18.5h1m1 0h1m2 0h2m6 0h5m2 0h2m2 0h1m1 0h1M2 19.5h4m1 0h2m1 0h2m5 0h1m3 0h3m2 0h1M1 20.5h1m1 0h4m1 0h2m3 0h1m1 0h1m1 0h10M8 21.5h6m2 0h5m3 0h5M0 22.5h7m1 0h1m1 0h2m1 0h1m3 0h1m1 0h2m1 0h1m1 0h2m1 0h1M0 23.5h1m5 0h1m1 0h1m3 0h1m3 0h1m1 0h1m1 0h1m3 0h2m1 0h2M0 24.5h1m1 0h3m1 0h1m2 0h3m2 0h1m2 0h1m2 0h5m1 0h3M0 25.5h1m1 0h3m1 0h1m1 0h2m1 0h2m1 0h3m4 0h1m2 0h2m2 0h1M0 26.5h1m1 0h3m1 0h1m1 0h1m1 0h1m2 0h1m3 0h3m1 0h1m1 0h1m2 0h1m1 0h1M0 27.5h1m5 0h1m2 0h3m1 0h2m1 0h1m2 0h3m1 0h1m1 0h1m1 0h1M0 28.5h7m1 0h1m2 0h1m1 0h3m3 0h2m2 0h1m1 0h1m1 0h1"/></svg>
+<span>효성고 안내</span></div><button class="iconbtn" id="searchBtn" aria-label="검색"></button>
     </div>
     <nav class="tabs" id="tabs"></nav>
   </header>
