@@ -1204,7 +1204,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .bmf-x{font-size:15px;font-weight:700;color:var(--navy);padding:6px 4px}
 #bmfMap{flex:1;min-height:0}
 .bmn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #14205C;color:#14205C;font:700 12px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.35)}
-.bms{display:flex;align-items:center;justify-content:center;gap:4px;width:60px;height:24px;border-radius:12px;background:#B08D57;border:2px solid #fff;color:#fff;font:700 12px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.bms{white-space:nowrap;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:4px;width:60px;height:24px;border-radius:12px;background:#B08D57;border:2px solid #fff;color:#fff;font:700 12px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 .bmbig{display:block;margin:0 0 4px;padding:6px 0;font-size:14.5px;font-weight:700;color:var(--navy)}
 .bmd{cursor:pointer}
 .near{margin:6px 0 4px}
@@ -1217,6 +1217,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .nearrow{padding:12px 0;border-bottom:1px solid var(--line)}
 .nearrow b{display:block;font-size:15.5px}
 .nearrow span{display:block;margin-top:3px;font-size:13px;line-height:1.5;color:var(--ink-3)}
+.rmap{height:260px;border-radius:14px;overflow:hidden;margin:6px 0 4px;background:var(--bg)}
+.candrow{display:block;width:100%;text-align:left;padding:12px 2px;border-top:1px solid var(--line)}
+.candrow b{display:block;font-size:15px;color:var(--navy)}
+.candrow span{display:block;margin-top:2px;font-size:12.5px;color:var(--ink-3)}
+.bms-s{background:#14205C}
 .routebtns{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .nearnote{margin:10px 0;font-size:12.5px;line-height:1.6;color:var(--ink-3)}
 #splash,.splash{display:none!important}
@@ -2144,7 +2149,7 @@ const commonSum = s=>CURR.common[s].reduce((a,c)=>a+c[1],0);
 const electSum = s=>(CURR.elect[s]||[]).reduce((a,g)=>a+g.credit*g.pick,0);
 
 const hav=(a,b)=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(b[1]-a[1]),dn=r(b[0]-a[0]),q=Math.sin(dl/2)**2+Math.cos(r(a[1]))*Math.cos(r(b[1]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(q))};
-function showNear(me,label){
+function showNear(me,label,alts){
   const box=document.getElementById('nearBox'); if(!box) return;
   const map={};
   BUS.board.forEach(b=>{const g=BUSGEO['board:'+b.name]; if(!g) return; b.stops.forEach((s,i)=>{const k=s[1]; (map[k] ||= {name:k,p:g.s[i],buses:[]}).buses.push(b.name+' '+s[0])})});
@@ -2154,7 +2159,8 @@ function showNear(me,label){
   const far=list[0].d>1500;
   const warn=far?`<div class="card tint" style="margin:12px 0"><h3 style="font-size:16px">가장 가까운 정류장이 ${fmt(list[0].d)} 떨어져 있어요</h3><p class="nearnote" style="margin:6px 0 0">걸어가기엔 멀어요. 아래에서 집 → 학교 대중교통 길찾기를 함께 확인해 보세요.</p></div>`:'';
   box.innerHTML=`<p class="nearnote" style="margin:6px 0 0"><b>${esc(label||'내 위치')}</b> 기준 가까운 스쿨버스 정류장이에요.</p>`+warn+list.map(x=>`<div class="nearrow"><b>${esc(x.name)}</b><span>직선 ${fmt(x.d)} · 도보 약 ${walk(x.d)}<br>${x.buses.map(esc).join(' / ')}</span></div>`).join('')
-    +`<p class="nearnote">직선거리 기준이라 실제 걷는 거리는 더 길 수 있어요.</p><h3 style="margin:18px 0 10px;font-size:16px">${esc(label||'내 위치')}에서 학교까지</h3>`+routeLinks(me,label||'내 위치')+busTags();
+    +`<p class="nearnote">직선거리 기준이라 실제 걷는 거리는 더 길 수 있어요.</p><h3 style="margin:18px 0 10px;font-size:16px">${esc(label||'내 위치')}에서 학교까지</h3>`+routeLinks(me,label||'내 위치')+busTags()+altsHtml(alts);
+  bindAlts(box,alts,(c,rest)=>showNear([c.x,c.y],c.label,[c,...rest]));
 }
 function findNear(){
   const box=document.getElementById('nearBox'); if(!box) return;
@@ -2170,16 +2176,24 @@ function loadKakaoMaps(){
     s.onload=()=>{try{kakao.maps.load(res)}catch(e){rej(e)}}; s.onerror=()=>rej(new Error('load')); document.head.appendChild(s);
   });
 }
-function geocodeQuery(q){
+function geocodeMulti(q){
   return new Promise(async (res,rej)=>{
     try{ await loadKakaoMaps() }catch(e){ return rej(new Error('sdk')) }
-    const OK=kakao.maps.services.Status.OK;
-    new kakao.maps.services.Geocoder().addressSearch(q,(r,st)=>{
-      if(st===OK&&r.length) return res({x:+r[0].x,y:+r[0].y,label:q});
-      new kakao.maps.services.Places().keywordSearch(q,(r2,st2)=>{ if(st2===OK&&r2.length) res({x:+r2[0].x,y:+r2[0].y,label:r2[0].place_name}); else res(null) },{location:new kakao.maps.LatLng(BUSGEO._school[1],BUSGEO._school[0]),radius:30000});
-    });
+    const S=kakao.maps.services, OK=S.Status.OK, out=[], seen=new Set();
+    const add=(x,y,label,sub)=>{ const k=label+'|'+Math.round(x*1e3); if(seen.has(k)) return; seen.add(k); out.push({x:+x,y:+y,label,sub:sub||''}) };
+    const kw=query=>new Promise(r=>new S.Places().keywordSearch(query,(d,st)=>{ if(st===OK) d.slice(0,5).forEach(p=>add(p.x,p.y,p.place_name,p.road_address_name||p.address_name)); r() }));
+    await new Promise(r=>new S.Geocoder().addressSearch(q,(d,st)=>{ if(st===OK) d.slice(0,3).forEach(a=>add(a.x,a.y,(a.road_address&&a.road_address.address_name)||a.address_name||q,'')); r() }));
+    await kw(q);
+    if(out.length<2){ const nq=q.replace(/\s+/g,''); if(nq!==q) await kw(nq); }
+    if(!out.length && !/아파트|역|학교|단지/.test(q)) await kw(q+' 아파트');
+    res(out.slice(0,6));
   });
 }
+function altsHtml(alts){
+  if(!alts||alts.length<2) return '';
+  return '<h3 style="margin:20px 0 6px;font-size:15px">다른 검색 결과</h3>'+alts.slice(1).map((c,i)=>`<button class="candrow" data-alt="${i+1}" type="button"><b>${esc(c.label)}</b><span>${esc(c.sub)}</span></button>`).join('');
+}
+function bindAlts(box,alts,pick){ if(!alts||alts.length<2) return; box.querySelectorAll('[data-alt]').forEach(b=>b.onclick=()=>{ const c=alts[+b.dataset.alt]; if(c) pick(c,alts.filter(x=>x!==c)); }); }
 const cleanName=s=>String(s||'출발지').replace(/[,\/]/g,' ').trim();
 function routeLinks(me,label){
   const sch=BUSGEO._school, nm=cleanName(label), en='효성고등학교', tail=`/${en},${sch[1]},${sch[0]}`;
@@ -2191,19 +2205,54 @@ async function findNearByAddress(){
   const box=document.getElementById('nearBox'), q=(document.getElementById('nearAddr')||{}).value; if(!box) return;
   if(!q||!q.trim()){box.innerHTML='<p class="nearnote">집 주소나 아파트 이름을 입력해 주세요.</p>';return}
   box.innerHTML='<p class="nearnote">주소를 찾고 있어요…</p>';
-  try{ const r=await geocodeQuery(q.trim()); if(r) showNear([r.x,r.y],r.label); else box.innerHTML='<p class="nearnote">주소를 찾지 못했어요. 도로명주소나 아파트 이름으로 다시 입력해 보세요.</p>' }
+  try{ const r=await geocodeMulti(q.trim()); if(r.length) showNear([r[0].x,r[0].y],r[0].label,r); else box.innerHTML='<p class="nearnote">주소를 찾지 못했어요. 아파트 이름이나 도로명주소(예: 위례중앙로 100)로 다시 입력해 보세요.</p>' }
   catch(e){ box.innerHTML='<p class="nearnote">주소 검색을 불러오지 못했어요. 잠시 후 다시 시도하거나 "내 위치로 찾기"를 이용해 주세요.</p>' }
 }
-function showRoute(me,label){
+function drawRoute(map,me,label,sch){
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+  const pin=(txt,cls)=>L.divIcon({className:'',html:'<span class="'+cls+'">'+txt+'</span>',iconSize:[60,24],iconAnchor:[30,12]});
+  L.marker([me[1],me[0]],{icon:pin('출발','bms bms-s')}).addTo(map);
+  L.marker([sch[1],sch[0]],{icon:pin('효성고','bms'),zIndexOffset:1000}).addTo(map);
+  map.fitBounds([[me[1],me[0]],[sch[1],sch[0]]],{padding:[40,40]});
+}
+async function showRoute(me,label,alts){
   const box=document.getElementById('routeBox'); if(!box) return;
-  const d=hav(me,BUSGEO._school), km=d<1000?Math.round(d/10)*10+'m':(d/1000).toFixed(1)+'km';
-  box.innerHTML=`<div class="nearrow"><b>${esc(label)} → 효성고등학교</b><span>직선거리 약 ${km}</span></div>`+routeLinks(me,label)+'<p class="nearnote">길찾기는 카카오맵에서 열려요. 출발 시각에 따라 소요 시간이 달라질 수 있어요.</p>';
+  const sch=BUSGEO._school, d=hav(me,sch), km=d<1000?Math.round(d/10)*10+'m':(d/1000).toFixed(1)+'km';
+  box.innerHTML=`<div class="nearrow"><b>${esc(label)} → 효성고등학교</b><span id="routeSum">직선거리 약 ${km} · 자동차 경로를 불러오는 중…</span></div><div id="routeMap" class="rmap"></div><button class="bmbig" id="routeBig" type="button">지도 크게 보기 · 확대/축소 ›</button>`+routeLinks(me,label)+'<p class="nearnote">대중교통 소요 시간은 위 "대중교통 길찾기"에서 확인할 수 있어요. 자동차 시간은 교통 상황을 반영하지 않은 예상이에요.</p>'+altsHtml(alts);
+  bindAlts(box,alts,(c,rest)=>showRoute([c.x,c.y],c.label,[c,...rest]));
+  let line=null;
+  const sum=document.getElementById('routeSum');
+  if(window.L){
+    const m=L.map('routeMap',{dragging:!L.Browser.mobile,scrollWheelZoom:false,tap:false}); drawRoute(m,me,label,sch);
+    document.getElementById('routeBig').onclick=()=>openRouteModal(me,label,line);
+    window.__routeMap=m;
+  }
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),9000);
+    const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${me[0]},${me[1]};${sch[0]},${sch[1]}?overview=full&geometries=geojson`,{signal:ctl.signal}); clearTimeout(to);
+    const j=await r.json(), rt=j.routes&&j.routes[0]; if(!rt) throw 0;
+    line=rt.geometry.coordinates.map(p=>[p[1],p[0]]);
+    if(window.L&&window.__routeMap){ L.polyline(line,{color:'#14205C',weight:5,opacity:.85}).addTo(window.__routeMap); window.__routeMap.fitBounds(L.latLngBounds(line),{padding:[30,30]}); }
+    if(sum) sum.textContent=`직선 ${km} · 자동차 약 ${Math.max(1,Math.round(rt.duration/60))}분 · 도로 ${(rt.distance/1000).toFixed(1)}km (교통 상황 제외)`;
+  }catch(e){ if(sum) sum.textContent=`직선거리 약 ${km}`; }
+}
+function openRouteModal(me,label,line){
+  if(!window.L) return;
+  const old=document.getElementById('bmapFull'); if(old) old.remove();
+  const el=document.createElement('div'); el.id='bmapFull';
+  el.innerHTML=`<div class="bmf-bar"><b>${esc(label)} → 효성고등학교</b><button class="bmf-x" type="button">닫기</button></div><div id="bmfMap"></div>`;
+  document.body.appendChild(el); document.documentElement.style.overflow='hidden';
+  const map=L.map('bmfMap',{zoomControl:true,scrollWheelZoom:true}); drawRoute(map,me,label,BUSGEO._school);
+  if(line&&line.length){ const pl=L.polyline(line,{color:'#14205C',weight:5,opacity:.85}).addTo(map); map.fitBounds(pl.getBounds().pad(.15)); }
+  const close=()=>{map.remove();el.remove();document.documentElement.style.overflow='';document.removeEventListener('keydown',k)};
+  const k=e=>{if(e.key==='Escape')close()}; document.addEventListener('keydown',k);
+  el.querySelector('.bmf-x').onclick=close; setTimeout(()=>map.invalidateSize(),50);
 }
 async function findRoute(){
   const box=document.getElementById('routeBox'), q=(document.getElementById('routeAddr')||{}).value; if(!box) return;
   if(!q||!q.trim()){box.innerHTML='<p class="nearnote">출발지를 입력해 주세요. (예: 위례역, 성남시청, 서울시 송파구 …)</p>';return}
   box.innerHTML='<p class="nearnote">출발지를 찾고 있어요…</p>';
-  try{ const r=await geocodeQuery(q.trim()); if(r) showRoute([r.x,r.y],r.label); else box.innerHTML='<p class="nearnote">출발지를 찾지 못했어요. 주소나 역·건물 이름으로 다시 입력해 보세요.</p>' }
+  try{ const r=await geocodeMulti(q.trim()); if(r.length) showRoute([r[0].x,r[0].y],r[0].label,r); else box.innerHTML='<p class="nearnote">출발지를 찾지 못했어요. 주소나 역·건물 이름으로 다시 입력해 보세요.</p>' }
   catch(e){ box.innerHTML='<p class="nearnote">검색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>' }
 }
 function findRouteMe(){
